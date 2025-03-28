@@ -34,7 +34,7 @@ serve(async (req) => {
 
     console.log(`Calculating shipping for country: ${country_code}, order total: ${order_total}`);
 
-    // Find the shipping zone for the country
+    // Find the shipping options for the country
     const { data: shippingOptions, error } = await supabase
       .from('shipping_options')
       .select('*')
@@ -57,7 +57,7 @@ serve(async (req) => {
 
       if (!intlShippingOptions || intlShippingOptions.length === 0) {
         return new Response(
-          JSON.stringify({ data: [] }),
+          JSON.stringify([]),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           }
@@ -73,14 +73,14 @@ serve(async (req) => {
       }));
 
       return new Response(
-        JSON.stringify({ data: results }),
+        JSON.stringify(results),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
     }
 
-    // Format response
+    // Format response for country-specific shipping options
     const results = shippingOptions.map(option => ({
       rate_id: option.id,
       rate_name: option.name,
@@ -90,7 +90,7 @@ serve(async (req) => {
     }));
 
     return new Response(
-      JSON.stringify({ data: results }),
+      JSON.stringify(results),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }

@@ -1,425 +1,360 @@
-
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Card, 
-  CardContent, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from "@/components/ui/card";
-import { Plus, Trash2, Upload, Edit } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Plus, Edit, Trash2, ImagePlus, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 
-const BUCKET_NAME = 'category-images';
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  images: string[];
+}
 
 const AdminCategoryImages = () => {
-  const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [currentImage, setCurrentImage] = useState(null);
-  const [formData, setFormData] = useState({
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [newCategory, setNewCategory] = useState({
     name: "",
-    description: ""
+    description: "",
+    images: [],
   });
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchCategoryImages = async () => {
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
     try {
       setLoading(true);
-      
-      // Get images from storage bucket
-      const { data: storageData, error: storageError } = await supabase
-        .storage
-        .from(BUCKET_NAME)
-        .list();
-
-      if (storageError) throw storageError;
-
-      // Get metadata from categories table
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*');
-
-      if (categoriesError) {
-        // If table doesn't exist yet, just use storage data
-        const imageUrls = storageData.map(file => ({
-          id: file.id,
-          name: file.name,
-          url: `${supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name).data.publicUrl}`,
-          title: file.name.split('.')[0].replace(/-/g, ' '),
-          description: ''
-        }));
-        setImages(imageUrls);
-      } else {
-        // Merge data from storage and categories table
-        const imageUrls = storageData.map(file => {
-          const matchingCategory = categoriesData.find(c => c.name === file.name.split('.')[0].replace(/-/g, ' '));
-          return {
-            id: file.id,
-            name: file.name,
-            url: `${supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name).data.publicUrl}`,
-            title: matchingCategory?.name || file.name.split('.')[0].replace(/-/g, ' '),
-            description: matchingCategory?.description || '',
-            category_id: matchingCategory?.id
-          };
-        });
-        setImages(imageUrls);
-      }
+      const { data, error } = await supabase.from("categories").select("*");
+      if (error) throw error;
+      setCategories(data || []);
     } catch (error) {
-      console.error("Error fetching category images:", error);
+      console.error("Error fetching categories:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch category images",
-        variant: "destructive"
+        description: "Failed to fetch categories",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCategoryImages();
-  }, []);
-
-  const handleFileChange = async (e) => {
-    try {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      // Validate file type
-      const fileType = file.type;
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(fileType)) {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a JPG, PNG, or WebP image",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Please upload an image smaller than 5MB",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      setUploading(true);
-      
-      // Create a unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `category-${Date.now()}.${fileExt}`;
-      
-      const { error } = await supabase
-        .storage
-        .from(BUCKET_NAME)
-        .upload(fileName, file);
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Image uploaded successfully",
-      });
-      
-      // Open dialog to add metadata
-      setCurrentImage({
-        name: fileName,
-        url: `${supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName).data.publicUrl}`
-      });
-      
-      setFormData({
-        name: fileName.split('.')[0].replace(/-/g, ' '),
-        description: ''
-      });
-      
-      setDialogOpen(true);
-      fetchCategoryImages();
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to upload image",
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(false);
-      // Reset the file input
-      e.target.value = '';
-    }
-  };
-
-  const handleDeleteImage = async (name, categoryId) => {
-    if (confirm("Are you sure you want to delete this image?")) {
-      try {
-        // If we have metadata in the categories table, delete it first
-        if (categoryId) {
-          const { error: metadataError } = await supabase
-            .from('categories')
-            .delete()
-            .eq('id', categoryId);
-            
-          if (metadataError) throw metadataError;
-        }
-        
-        // Then delete the image from storage
-        const { error } = await supabase
-          .storage
-          .from(BUCKET_NAME)
-          .remove([name]);
-          
-        if (error) throw error;
-        
-        toast({
-          title: "Success",
-          description: "Image deleted successfully",
-        });
-        
-        fetchCategoryImages();
-      } catch (error) {
-        console.error("Error deleting image:", error);
-        toast({
-          title: "Error",
-          description: "Failed to delete image",
-          variant: "destructive"
-        });
-      }
-    }
-  };
-
-  const handleEditImage = (image) => {
-    setCurrentImage(image);
-    setFormData({
-      name: image.title || '',
-      description: image.description || ''
-    });
-    setDialogOpen(true);
-  };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setNewCategory((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const handleSubmitMetadata = async (e) => {
-    e.preventDefault();
-    
+  const handleAddCategory = async () => {
     try {
-      // Check if we have a categories table
-      const { error: checkError } = await supabase
-        .from('categories')
-        .select('id')
-        .limit(1);
-      
-      if (checkError) {
-        // Categories table doesn't exist yet, create it
-        await supabase.rpc('create_categories_table_if_not_exists');
-      }
-      
-      if (currentImage.category_id) {
-        // Update existing record
-        const { error } = await supabase
-          .from('categories')
-          .update({
-            name: formData.name,
-            description: formData.description
-          })
-          .eq('id', currentImage.category_id);
-          
-        if (error) throw error;
-      } else {
-        // Insert new record
-        const { error } = await supabase
-          .from('categories')
-          .insert({
-            name: formData.name,
-            description: formData.description
-          });
-          
-        if (error) throw error;
-      }
-      
+      setSubmitting(true);
+      const { data, error } = await supabase
+        .from("categories")
+        .insert([newCategory])
+        .select();
+      if (error) throw error;
       toast({
         title: "Success",
-        description: "Category metadata saved successfully",
+        description: "Category added successfully",
       });
-      
-      setDialogOpen(false);
-      fetchCategoryImages();
+      setCategories([...categories, ...data]);
+      setNewCategory({
+        name: "",
+        description: "",
+        images: [],
+      });
+      setOpen(false);
     } catch (error) {
-      console.error("Error saving metadata:", error);
+      console.error("Error adding category:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to save metadata",
-        variant: "destructive"
+        description: "Failed to add category",
+        variant: "destructive",
       });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEdit = (category) => {
+    setEditingCategory(category);
+  };
+
+  const handleUpdateCategory = async () => {
+    try {
+      setSubmitting(true);
+      if (!editingCategory) return;
+      const { error } = await supabase
+        .from("categories")
+        .update(editingCategory)
+        .eq("id", editingCategory.id);
+      if (error) throw error;
+      toast({
+        title: "Success",
+        description: "Category updated successfully",
+      });
+      setCategories(
+        categories.map((category) =>
+          category.id === editingCategory.id ? editingCategory : category
+        )
+      );
+      setEditingCategory(null);
+    } catch (error) {
+      console.error("Error updating category:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update category",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      setSubmitting(true);
+      const { error } = await supabase.from("categories").delete().eq("id", id);
+      if (error) throw error;
+      toast({
+        title: "Success",
+        description: "Category deleted successfully",
+      });
+      setCategories(categories.filter((category) => category.id !== id));
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete category",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <AdminLayout title="Category Images">
-      <div className="mb-6">
-        <p className="text-gray-600 mb-4">
-          Manage the category images that appear on the homepage. Images should be high-quality and have a similar aspect ratio for best results.
-        </p>
-        
-        <div className="flex items-center space-x-4">
-          <label className="flex items-center space-x-2 px-4 py-2 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition">
-            <Upload className="h-5 w-5" />
-            <span>Upload Category Image</span>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-              disabled={uploading}
-            />
-          </label>
-          
-          {uploading && (
-            <div className="flex items-center space-x-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              <span>Uploading...</span>
+      <div className="flex justify-end mb-4">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Category
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add Category</DialogTitle>
+              <DialogDescription>
+                Add a new category to the store.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={newCategory.name}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={newCategory.description}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label className="text-right">Images</Label>
+                <div className="col-span-3">
+                  <ImageUploader
+                    images={newCategory.images}
+                    onChange={(images) =>
+                      setNewCategory((prev) => ({ ...prev, images }))
+                    }
+                  />
+                </div>
+              </div>
             </div>
-          )}
-        </div>
+            <DialogFooter>
+              <Button type="button" onClick={handleAddCategory} disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Please wait
+                  </>
+                ) : (
+                  "Add Category"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <Loader2 className="mr-2 h-8 w-8 animate-spin" />
         </div>
-      ) : images.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {images.map((image) => (
-            <Card key={image.id} className="overflow-hidden">
-              <CardHeader className="pb-2">
-                <CardTitle>{image.title || "Untitled Category"}</CardTitle>
-                {image.description && (
-                  <CardDescription>{image.description}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="relative aspect-[4/3] group">
-                  <img
-                    src={image.url}
-                    alt={image.title || "Category image"}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="mr-2"
-                      onClick={() => handleEditImage(image)}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
+      ) : (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {categories.map((category) => (
+                <TableRow key={category.id}>
+                  <TableCell>{category.name}</TableCell>
+                  <TableCell>{category.description}</TableCell>
+                  <TableCell className="text-right">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80">
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">
+                              Name
+                            </Label>
+                            <Input
+                              type="text"
+                              id="name"
+                              defaultValue={category.name}
+                              onChange={(e) =>
+                                setEditingCategory((prev) => ({
+                                  ...prev!,
+                                  name: e.target.value,
+                                }))
+                              }
+                              className="col-span-3"
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="description" className="text-right">
+                              Description
+                            </Label>
+                            <Textarea
+                              id="description"
+                              defaultValue={category.description}
+                              onChange={(e) =>
+                                setEditingCategory((prev) => ({
+                                  ...prev!,
+                                  description: e.target.value,
+                                }))
+                              }
+                              className="col-span-3"
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-start gap-4">
+                            <Label className="text-right">Images</Label>
+                            <div className="col-span-3">
+                              <ImageUploader
+                                images={editingCategory?.images || []}
+                                onChange={(images) =>
+                                  setEditingCategory((prev) => ({
+                                    ...prev!,
+                                    images: images,
+                                  }))
+                                }
+                              />
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={handleUpdateCategory}
+                            disabled={submitting}
+                          >
+                            {submitting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Please wait
+                              </>
+                            ) : (
+                              "Update Category"
+                            )}
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDeleteImage(image.name, image.category_id)}
+                      onClick={() => handleDelete(category.id)}
+                      disabled={submitting}
                     >
-                      <Trash2 className="h-4 w-4 mr-1" />
+                      {submitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        </>
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-2" />
+                      )}
                       Delete
                     </Button>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-4">
-                <p className="text-sm text-gray-500 truncate">
-                  {image.description || "No description provided"}
-                </p>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-          <p className="text-gray-500 mb-4">No category images uploaded yet</p>
-          <label className="inline-flex items-center space-x-2 px-4 py-2 bg-primary text-white rounded-md cursor-pointer hover:bg-primary/90 transition">
-            <Plus className="h-5 w-5" />
-            <span>Upload Your First Category Image</span>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-              disabled={uploading}
-            />
-          </label>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {currentImage?.category_id ? "Edit Category Details" : "Add Category Details"}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <form onSubmit={handleSubmitMetadata}>
-            <div className="grid gap-4 py-4">
-              <div className="mb-4">
-                <img 
-                  src={currentImage?.url} 
-                  alt="Preview" 
-                  className="w-full h-48 object-cover rounded-md"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="name">Category Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={3}
-                />
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Save</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 };

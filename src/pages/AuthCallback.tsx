@@ -31,19 +31,30 @@ const AuthCallback = () => {
           if (countError) {
             console.error('Error checking users:', countError);
           } else if (count === 0) {
-            // Make the first user an admin
-            const { error: updateError } = await supabase
-              .from('users')
-              .update({ is_admin: true })
-              .eq('id', session.user.id);
+            // Get the admin role ID
+            const { data: adminRole, error: roleError } = await supabase
+              .from('roles')
+              .select('id')
+              .eq('name', 'admin')
+              .single();
               
-            if (updateError) {
-              console.error('Error making user admin:', updateError);
+            if (roleError) {
+              console.error('Error finding admin role:', roleError);
             } else {
-              toast({
-                title: "Admin access granted",
-                description: "You have been assigned admin privileges",
-              });
+              // Make the first user an admin
+              const { error: updateError } = await supabase
+                .from('users')
+                .update({ role: adminRole.id })
+                .eq('id', session.user.id);
+                
+              if (updateError) {
+                console.error('Error making user admin:', updateError);
+              } else {
+                toast({
+                  title: "Admin access granted",
+                  description: "You have been assigned admin privileges",
+                });
+              }
             }
           }
         }

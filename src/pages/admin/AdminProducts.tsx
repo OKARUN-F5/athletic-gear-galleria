@@ -99,7 +99,21 @@ const AdminProducts = () => {
       setLoading(true);
       const { data, error } = await supabase.from("products").select("*");
       if (error) throw error;
-      setProducts(data || []);
+      
+      // Transform data to match our Product interface
+      const formattedProducts: Product[] = (data || []).map(product => ({
+        id: product.id,
+        name: product.name,
+        description: product.description || '',
+        price: product.price,
+        cat_id: product.cat_id || '',
+        brand: product.brand || '',
+        bestseller: product.bestseller || false,
+        color: product.color || null,
+        images: product.images || []
+      }));
+      
+      setProducts(formattedProducts);
     } catch (error) {
       console.error("Error fetching products:", error);
       toast({
@@ -159,7 +173,7 @@ const AdminProducts = () => {
       if (error) throw error;
       
       if (data && data[0] && newProduct.inventory.length > 0) {
-        // Add inventory records
+        // Add inventory records to the product_inventory table
         const inventoryData = newProduct.inventory.map(item => ({
           product_id: data[0].id,
           size: item.size,
@@ -168,17 +182,15 @@ const AdminProducts = () => {
           last_updated: new Date().toISOString()
         }));
         
-        const { error: inventoryError } = await supabase
-          .from('inventory')
-          .insert(inventoryData);
-          
-        if (inventoryError) {
-          console.error("Error adding inventory:", inventoryError);
-          toast({
-            title: "Warning",
-            description: "Product created but inventory data could not be saved",
-            variant: "destructive",
-          });
+        // Insert into product_inventory table
+        for (const item of inventoryData) {
+          const { error: inventoryError } = await supabase
+            .from('product_inventory')
+            .insert(item);
+            
+          if (inventoryError) {
+            console.error("Error adding inventory:", inventoryError);
+          }
         }
       }
       
@@ -187,7 +199,20 @@ const AdminProducts = () => {
         description: "Product added successfully",
       });
       
-      setProducts([...products, ...data]);
+      // Transform the returned product to match our Product interface
+      const newProducts = data ? data.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description || '',
+        price: p.price,
+        cat_id: p.cat_id || '',
+        brand: p.brand || '',
+        bestseller: p.bestseller || false,
+        color: p.color || null,
+        images: p.images || []
+      })) : [];
+      
+      setProducts([...products, ...newProducts]);
       setNewProduct({
         name: "",
         description: "",
@@ -276,9 +301,9 @@ const AdminProducts = () => {
     try {
       setSubmitting(true);
       
-      // First delete any inventory records
+      // First delete any inventory records from product_inventory
       const { error: inventoryError } = await supabase
-        .from("inventory")
+        .from("product_inventory")
         .delete()
         .eq("product_id", id);
       

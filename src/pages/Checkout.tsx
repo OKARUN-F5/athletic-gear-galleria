@@ -161,10 +161,10 @@ const Checkout = () => {
     }
 
     try {
-      // Create order in database
+      // Create order in database using the RPC function
       const { data: order, error } = await supabase.rpc('create_order_with_items', {
         p_user_id: user.id,
-        p_total: total,
+        p_total: parseFloat(total.toString()),
         p_items: mockCart
       });
 

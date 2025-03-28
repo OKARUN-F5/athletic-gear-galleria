@@ -14,7 +14,7 @@ interface Order {
   date: string;
   status: string;
   items: number;
-  total: number;
+  total: string;
   statusClass: string;
 }
 
@@ -61,7 +61,7 @@ const Orders = () => {
           return;
         }
         
-        const formattedOrders = data.map(order => ({
+        const formattedOrders: Order[] = data.map(order => ({
           id: order.id,
           date: new Date(order.date).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -150,7 +150,7 @@ const Orders = () => {
                 <div className="flex items-center space-x-4 border-t pt-4">
                   <Package className="h-4 w-4 text-gray-400" />
                   <span className="text-sm text-gray-600">{order.items} items</span>
-                  <span className="text-sm font-medium">{currencySymbol}{order.total.toFixed(2)}</span>
+                  <span className="text-sm font-medium">{currencySymbol}{parseFloat(order.total).toFixed(2)}</span>
                 </div>
               </div>
             ))}
