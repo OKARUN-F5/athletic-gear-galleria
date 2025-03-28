@@ -1,69 +1,152 @@
-# Welcome to your Lovable project
 
-## Project info
+# SportyWear - E-Commerce Platform
 
-**URL**: https://lovable.dev/projects/e7fe79e1-d558-462e-b125-664ec3a9320d
+A modern, fully-functional e-commerce website for selling premium sportswear and athletic apparel.
 
-## How can I edit this code?
+## 🚀 Features
 
-There are several ways of editing your application.
+- Responsive design optimized for all devices
+- Product browsing with filtering and search
+- Product detail pages with image galleries
+- Shopping cart and wishlist functionality
+- User authentication and profiles
+- Secure checkout process
+- Admin dashboard for product management
 
-**Use Lovable**
+## 📋 Implementation Guide
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e7fe79e1-d558-462e-b125-664ec3a9320d) and start prompting.
+### 1. Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+#### Clone the Repository
+```bash
+git clone <YOUR_REPOSITORY_URL>
+cd sportywear
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### 2. Authentication Setup
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+This project uses Supabase for authentication. After connecting to Supabase:
 
-**Use GitHub Codespaces**
+1. Enable Email/Password authentication in Supabase Auth settings
+2. Set up social providers (optional): Google, Facebook
+3. Configure email templates for verification, password reset, etc.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 3. Database Setup
 
-## What technologies are used for this project?
+#### Database Schema
 
-This project is built with .
+The project uses the following database tables:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+| Table Name | Description |
+|------------|-------------|
+| products | Store product information (name, description, price, etc.) |
+| categories | Product categories and subcategories |
+| inventory | Track product stock and availability |
+| orders | Store order information |
+| order_items | Individual items in each order |
+| users | Extended user profile information |
+| reviews | Product reviews and ratings |
 
-## How can I deploy this project?
+#### Setting Up Supabase Tables
 
-Simply open [Lovable](https://lovable.dev/projects/e7fe79e1-d558-462e-b125-664ec3a9320d) and click on Share -> Publish.
+1. Connect to your Supabase project
+2. Create the tables according to the schema in the `database/schema.sql` file
+3. Set up Row Level Security (RLS) policies for each table
+4. Create necessary database functions and triggers
 
-## I want to use a custom domain - is that possible?
+### 4. Local Development
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+```bash
+# Start the development server
+npm run dev
+
+# Run tests
+npm test
+
+# Build for production
+npm run build
+```
+
+### 5. Testing
+
+This project uses Vitest for testing. To run tests:
+
+```bash
+# Run all tests
+npm test
+
+# Run specific tests
+npm test -- --testNamePattern="product"
+```
+
+Key testing areas:
+- User authentication flows
+- Shopping cart functionality
+- Checkout process
+- API integration
+
+### 6. Deployment
+
+1. Build the project: `npm run build`
+2. Deploy to your hosting provider of choice
+3. Configure environment variables for production
+
+### 7. Admin Dashboard Access
+
+To access the admin dashboard:
+1. Create an admin user in Supabase
+2. Assign the "admin" role to this user
+3. Access the dashboard at `/admin` route
+
+## 📦 Project Structure
+
+```
+src/
+├── assets/          # Static assets and images
+├── components/      # Reusable UI components
+├── context/         # React context providers
+├── hooks/           # Custom React hooks
+├── layouts/         # Page layout components
+├── lib/             # Utility functions and helpers
+├── pages/           # Page components
+├── services/        # API and service integrations
+└── styles/          # Global styles and Tailwind config
+```
+
+## 📝 Future Enhancements
+
+- Advanced filtering and search functionality
+- Product recommendations
+- User reviews and ratings
+- Wish list functionality
+- Multiple payment gateways
+- Order tracking
+- Email notifications
+- Multi-language support
+
+## ⚙️ Environment Variables
+
+For local development, create a `.env.local` file with the following variables:
+
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+## 🔐 Connecting to GitHub
+
+1. Create a new repository on GitHub
+2. Add the remote to your local repository:
+   ```bash
+   git remote add origin https://github.com/yourusername/sportywear.git
+   ```
+3. Push your code:
+   ```bash
+   git push -u origin main
+   ```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
