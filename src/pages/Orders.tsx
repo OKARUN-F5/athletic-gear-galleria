@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Package, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -9,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface Order {
+interface OrderDisplay {
   id: string;
   date: string;
   status: string;
@@ -39,7 +38,7 @@ const Orders = () => {
   const { getCurrencySymbol } = useRegion();
   const { user } = useAuth();
   const currencySymbol = getCurrencySymbol();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -61,7 +60,7 @@ const Orders = () => {
           return;
         }
         
-        const formattedOrders: Order[] = data.map(order => ({
+        const formattedOrders: OrderDisplay[] = data.map(order => ({
           id: order.id,
           date: new Date(order.date).toLocaleDateString('en-US', {
             year: 'numeric',

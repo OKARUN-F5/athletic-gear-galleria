@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -33,7 +32,6 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-// Mock cart data - in a real app this would come from a cart context/store
 const mockCart = [
   { id: '1', name: 'Basketball Jersey', price: 79.99, quantity: 1 },
   { id: '2', name: 'Sports Shorts', price: 39.99, quantity: 2 },
@@ -60,16 +58,12 @@ const Checkout = () => {
   const { user } = useAuth();
   const currencySymbol = getCurrencySymbol();
 
-  // Calculate subtotal from cart
   const subtotal = mockCart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   
-  // Get shipping rates based on selected country and order total
   const { shippingRates, loading: loadingShipping } = useShipping(selectedCountry, subtotal);
   
-  // Default shipping price (will be updated when user selects a shipping method)
   const [shippingCost, setShippingCost] = useState(0);
   
-  // Calculate total with shipping
   const total = subtotal + shippingCost;
 
   const form = useForm<FormData>({
@@ -88,29 +82,24 @@ const Checkout = () => {
     },
   });
 
-  // Handle country selection
   const handleCountryChange = (value: string) => {
     setSelectedCountry(value);
     form.setValue('country', value);
-    // Reset shipping method when country changes
     setSelectedShippingRate(null);
     form.setValue('shippingMethod', '');
     setShippingCost(0);
   };
 
-  // Handle shipping method selection
   const handleShippingMethodChange = (value: string) => {
     setSelectedShippingRate(value);
     form.setValue('shippingMethod', value);
     
-    // Update shipping cost
     const selectedRate = shippingRates.find(rate => rate.id === value);
     if (selectedRate) {
       setShippingCost(selectedRate.price);
     }
   };
 
-  // Process payment through Supabase Edge Function
   const processPayment = async (paymentData: FormData) => {
     try {
       const selectedRate = shippingRates.find(rate => rate.id === selectedShippingRate);
@@ -141,10 +130,9 @@ const Checkout = () => {
         throw new Error(response.data.error || 'Payment failed');
       }
 
-      // If Stripe returns a checkout URL, redirect the user
       if (response.data.url) {
         window.location.href = response.data.url;
-        return null; // We're redirecting, so no need to return data
+        return null;
       }
 
       return response.data;
@@ -154,14 +142,12 @@ const Checkout = () => {
     }
   };
 
-  // Create order in database
   const createOrder = async (paymentData: FormData) => {
     if (!user) {
       throw new Error('User not authenticated');
     }
 
     try {
-      // Create order in database using the RPC function
       const { data: order, error } = await supabase.rpc('create_order_with_items', {
         p_user_id: user.id,
         p_total: parseFloat(total.toString()),
@@ -201,15 +187,11 @@ const Checkout = () => {
 
     setIsLoading(true);
     try {
-      // Process payment
       const paymentResult = await processPayment(data);
       
-      // If we got redirected to Stripe, we won't get here
       if (paymentResult) {
-        // Create order in database
         await createOrder(data);
         
-        // Show success state
         setIsSuccess(true);
         
         toast({
@@ -217,7 +199,6 @@ const Checkout = () => {
           description: 'Your payment was successful and your order is being processed',
         });
         
-        // Redirect to order confirmation after a delay
         setTimeout(() => {
           navigate('/orders');
         }, 3000);
@@ -262,7 +243,6 @@ const Checkout = () => {
         <div className="lg:col-span-2">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              {/* Shipping Information */}
               <div className="bg-white p-6 rounded-lg border shadow-sm">
                 <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -396,7 +376,6 @@ const Checkout = () => {
                 </div>
               </div>
               
-              {/* Shipping Method */}
               <div className="bg-white p-6 rounded-lg border shadow-sm">
                 <h2 className="text-xl font-semibold mb-4">Shipping Method</h2>
                 
@@ -463,7 +442,6 @@ const Checkout = () => {
                 )}
               </div>
               
-              {/* Additional Information */}
               <div className="bg-white p-6 rounded-lg border shadow-sm">
                 <h2 className="text-xl font-semibold mb-4">Additional Information</h2>
                 <FormField
@@ -481,7 +459,6 @@ const Checkout = () => {
                 />
               </div>
               
-              {/* Mobile Summary (visible on small screens) */}
               <div className="lg:hidden bg-white p-6 rounded-lg border shadow-sm">
                 <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
                 <div className="space-y-4">
@@ -508,7 +485,7 @@ const Checkout = () => {
                     </p>
                   </div>
                   <Separator />
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-lg">
                     <p className="font-bold">Total</p>
                     <p className="font-bold">{currencySymbol}{total.toFixed(2)}</p>
                   </div>
@@ -533,7 +510,6 @@ const Checkout = () => {
           </Form>
         </div>
         
-        {/* Order Summary (visible on large screens) */}
         <div className="hidden lg:block">
           <div className="bg-white p-6 rounded-lg border shadow-sm sticky top-24">
             <h2 className="text-xl font-semibold mb-4">Order Summary</h2>

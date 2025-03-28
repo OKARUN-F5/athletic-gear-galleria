@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -90,41 +89,40 @@ const AdminProducts = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('name');
+        
+        if (error) {
+          throw error;
+        }
+        
+        const productsWithDefaults = data.map(product => ({
+          ...product,
+          brand: "",
+          bestseller: false,
+          color: ""
+        }));
+        
+        setProducts(productsWithDefaults);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load products',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     fetchProducts();
-    fetchCategories();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.from("products").select("*");
-      if (error) throw error;
-      
-      // Transform data to match our Product interface
-      const formattedProducts: Product[] = (data || []).map(product => ({
-        id: product.id,
-        name: product.name,
-        description: product.description || '',
-        price: product.price,
-        cat_id: product.cat_id || '',
-        brand: product.brand || '',
-        bestseller: product.bestseller || false,
-        color: product.color || null,
-        images: product.images || []
-      }));
-      
-      setProducts(formattedProducts);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch products",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [toast]);
 
   const fetchCategories = async () => {
     try {
@@ -153,7 +151,6 @@ const AdminProducts = () => {
     try {
       setSubmitting(true);
       
-      // Create the product data
       const productData = {
         name: newProduct.name,
         description: newProduct.description,
@@ -173,7 +170,6 @@ const AdminProducts = () => {
       if (error) throw error;
       
       if (data && data[0] && newProduct.inventory.length > 0) {
-        // Add inventory records to the product_inventory table
         const inventoryData = newProduct.inventory.map(item => ({
           product_id: data[0].id,
           size: item.size,
@@ -182,7 +178,6 @@ const AdminProducts = () => {
           last_updated: new Date().toISOString()
         }));
         
-        // Insert into product_inventory table
         for (const item of inventoryData) {
           const { error: inventoryError } = await supabase
             .from('product_inventory')
@@ -199,7 +194,6 @@ const AdminProducts = () => {
         description: "Product added successfully",
       });
       
-      // Transform the returned product to match our Product interface
       const newProducts = data ? data.map(p => ({
         id: p.id,
         name: p.name,
@@ -227,7 +221,6 @@ const AdminProducts = () => {
       });
       setOpen(false);
       
-      // Refresh products to get the latest data
       fetchProducts();
       
     } catch (error) {
@@ -282,7 +275,6 @@ const AdminProducts = () => {
       );
       setEditingProduct(null);
       
-      // Refresh products to get the latest data
       fetchProducts();
       
     } catch (error) {
@@ -301,7 +293,6 @@ const AdminProducts = () => {
     try {
       setSubmitting(true);
       
-      // First delete any inventory records from product_inventory
       const { error: inventoryError } = await supabase
         .from("product_inventory")
         .delete()
@@ -311,7 +302,6 @@ const AdminProducts = () => {
         console.error("Error deleting inventory:", inventoryError);
       }
       
-      // Then delete the product
       const { error } = await supabase
         .from("products")
         .delete()
@@ -333,6 +323,90 @@ const AdminProducts = () => {
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const updateInventory = async (productId: string, inventoryData: any) => {
+    try {
+      const { data: existingData, error: fetchError } = await supabase
+        .from('product_inventory')
+        .select('*')
+        .eq('product_id', productId)
+        .eq('size', inventoryData.size)
+        .eq('color', inventoryData.color);
+      
+      if (fetchError) {
+        throw fetchError;
+      }
+      
+      if (existingData && existingData.length > 0) {
+        const { error: updateError } = await supabase
+          .from('product_inventory')
+          .update({ quantity: inventoryData.quantity })
+          .eq('id', existingData[0].id);
+        
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('product_inventory')
+          .insert({
+            product_id: productId,
+            size: inventoryData.size,
+            color: inventoryData.color,
+            quantity: inventoryData.quantity
+          });
+        
+        if (insertError) throw insertError;
+      }
+      
+      const { data: updatedProduct, error: productError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', productId)
+        .single();
+      
+      if (productError) throw productError;
+      
+      const productWithDefaults = {
+        ...updatedProduct,
+        brand: "",
+        bestseller: false,
+        color: ""
+      };
+      
+      setProducts(prevProducts => 
+        prevProducts.map(p => p.id === productId ? productWithDefaults : p)
+      );
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating inventory:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update inventory',
+        variant: 'destructive'
+      });
+      return false;
+    }
+  };
+
+  const fetchInventory = async (productId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('product_inventory')
+        .select('*')
+        .eq('product_id', productId);
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load inventory data',
+        variant: 'destructive'
+      });
+      return [];
     }
   };
 

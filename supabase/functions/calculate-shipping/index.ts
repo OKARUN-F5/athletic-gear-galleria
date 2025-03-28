@@ -65,11 +65,11 @@ serve(async (req) => {
       }
 
       const results = intlShippingOptions.map(option => ({
-        rate_id: option.id,
-        rate_name: option.name,
-        rate_price: option.base_cost,
-        min_days: option.delivery_time_min,
-        max_days: option.delivery_time_max
+        id: option.id,
+        name: option.name,
+        price: option.base_cost,
+        min_delivery_days: option.delivery_time_min,
+        max_delivery_days: option.delivery_time_max
       }));
 
       return new Response(
@@ -82,11 +82,11 @@ serve(async (req) => {
 
     // Format response for country-specific shipping options
     const results = shippingOptions.map(option => ({
-      rate_id: option.id,
-      rate_name: option.name,
-      rate_price: option.base_cost,
-      min_days: option.delivery_time_min,
-      max_days: option.delivery_time_max
+      id: option.id,
+      name: option.name,
+      price: option.base_cost,
+      min_delivery_days: option.delivery_time_min,
+      max_delivery_days: option.delivery_time_max
     }));
 
     return new Response(

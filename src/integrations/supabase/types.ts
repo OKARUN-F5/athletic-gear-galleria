@@ -135,6 +135,41 @@ export type Database = {
           },
         ]
       }
+      product_inventory: {
+        Row: {
+          color: string | null
+          id: string
+          last_updated: string | null
+          product_id: string | null
+          quantity: number | null
+          size: string | null
+        }
+        Insert: {
+          color?: string | null
+          id?: string
+          last_updated?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          size?: string | null
+        }
+        Update: {
+          color?: string | null
+          id?: string
+          last_updated?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          size?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           available_colors: string[] | null
@@ -270,6 +305,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_order_with_items: {
+        Args: {
+          p_user_id: string
+          p_total: number
+          p_items: Json
+        }
+        Returns: string
+      }
       generate_database_types: {
         Args: Record<PropertyKey, never>
         Returns: Json
