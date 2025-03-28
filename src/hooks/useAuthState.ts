@@ -19,18 +19,29 @@ export const useAuthState = () => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Check if user is admin
+        // Check if user is admin by getting their role
         const { data: userProfile, error } = await supabase
           .from('users')
-          .select('is_admin')
+          .select('role')
           .eq('id', session.user.id)
           .single();
         
         if (error) {
           console.error('Error fetching user profile:', error);
-        } else {
-          setIsAdmin(!!userProfile?.is_admin);
-          console.log('User admin status:', !!userProfile?.is_admin);
+        } else if (userProfile) {
+          // Get the role name
+          const { data: roleData, error: roleError } = await supabase
+            .from('roles')
+            .select('name')
+            .eq('id', userProfile.role)
+            .single();
+            
+          if (roleError) {
+            console.error('Error fetching role:', roleError);
+          } else {
+            setIsAdmin(roleData?.name === 'admin');
+            console.log('User role:', roleData?.name);
+          }
         }
       }
       
@@ -48,28 +59,53 @@ export const useAuthState = () => {
       setUser(session?.user ?? null);
       
       if (event === 'SIGNED_IN' && session) {
+        // Check if the user exists in our users table
         const { data: existingUser, error } = await supabase
           .from('users')
-          .select('is_admin')
+          .select('role')
           .eq('id', session.user.id)
           .single();
           
         if (error) {
           console.error('Error checking existing user:', error);
           
+          // Get the default user role id
+          const { data: userRole, error: roleError } = await supabase
+            .from('roles')
+            .select('id')
+            .eq('name', 'user')
+            .single();
+            
+          if (roleError) {
+            console.error('Error getting user role:', roleError);
+            return;
+          }
+          
           // Create user profile if it doesn't exist
           const { error: insertError } = await supabase.from('users').insert({
             id: session.user.id,
+            email: session.user.email || '',
             full_name: session.user.user_metadata.full_name || '',
-            is_admin: false,
+            role: userRole.id
           });
           
           if (insertError) {
             console.error('Error creating user profile:', insertError);
           }
         } else if (existingUser) {
-          setIsAdmin(!!existingUser.is_admin);
-          console.log('User signed in with admin status:', !!existingUser.is_admin);
+          // Get the role name
+          const { data: roleData, error: roleError } = await supabase
+            .from('roles')
+            .select('name')
+            .eq('id', existingUser.role)
+            .single();
+            
+          if (roleError) {
+            console.error('Error fetching role:', roleError);
+          } else {
+            setIsAdmin(roleData?.name === 'admin');
+            console.log('User signed in with role:', roleData?.name);
+          }
         }
       }
     });

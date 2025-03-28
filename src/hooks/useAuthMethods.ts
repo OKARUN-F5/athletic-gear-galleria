@@ -65,32 +65,49 @@ export const useAuthMethods = () => {
 
   const signUpWithEmail = async (email: string, password: string, fullName: string) => {
     try {
-      const { error, data } = await supabase.auth.signUp({ 
+      const { error: authError, data } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
           data: {
-            full_name: fullName,
-            is_admin: false,
+            full_name: fullName
           }
         }
       });
       
-      if (error) {
+      if (authError) {
         toast({
           title: "Sign up failed",
-          description: error.message,
+          description: authError.message,
           variant: "destructive",
         });
-        return { success: false, error: error.message };
+        return { success: false, error: authError.message };
+      }
+      
+      // Get the user role
+      const { data: userRole, error: roleError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'user')
+        .single();
+        
+      if (roleError) {
+        console.error('Error getting user role:', roleError);
+        toast({
+          title: "Sign up failed",
+          description: "Could not assign user role",
+          variant: "destructive",
+        });
+        return { success: false, error: "Could not assign user role" };
       }
       
       // Create user in our database
       if (data.user) {
         const { error: userError } = await supabase.from('users').insert({
           id: data.user.id,
+          email: email,
           full_name: fullName,
-          is_admin: false,
+          role: userRole.id
         });
         
         if (userError) {

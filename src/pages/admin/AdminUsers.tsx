@@ -5,29 +5,78 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Search, UserPlus } from "lucide-react";
+import { Search } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
+interface Role {
+  id: string;
+  name: string;
+}
+
+interface User {
+  id: string;
+  full_name: string | null;
+  email: string;
+  role: string;
+  created_at: string | null;
+  roleName?: string;
+}
+
 const AdminUsers = () => {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+
+  const fetchRoles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('roles')
+        .select('*');
+        
+      if (error) throw error;
+      setRoles(data || []);
+      
+      return data;
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch roles",
+        variant: "destructive"
+      });
+      return [];
+    }
+  };
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       
+      // Fetch roles first
+      const rolesData = await fetchRoles();
+      
       let query = supabase.from("users").select("*");
       
       if (searchTerm) {
-        query = query.ilike("full_name", `%${searchTerm}%`);
+        query = query.or(`email.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`);
       }
       
       const { data, error } = await query;
       
       if (error) throw error;
-      setUsers(data || []);
+      
+      // Map role IDs to role names
+      const usersWithRoleNames = (data || []).map(user => {
+        const userRole = rolesData.find(role => role.id === user.role);
+        return {
+          ...user,
+          roleName: userRole?.name || 'Unknown'
+        };
+      });
+      
+      setUsers(usersWithRoleNames);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({
@@ -44,26 +93,44 @@ const AdminUsers = () => {
     fetchUsers();
   }, [searchTerm]);
 
-  const toggleAdminStatus = async (userId, currentStatus) => {
+  const toggleAdminStatus = async (userId: string, currentRoleName: string) => {
     try {
+      // Find the admin and user role IDs
+      const adminRole = roles.find(role => role.name === 'admin');
+      const userRole = roles.find(role => role.name === 'user');
+      
+      if (!adminRole || !userRole) {
+        toast({
+          title: "Error",
+          description: "Could not find required roles",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Determine the new role
+      const newRoleId = currentRoleName === 'admin' ? userRole.id : adminRole.id;
+      
       const { error } = await supabase
         .from("users")
-        .update({ is_admin: !currentStatus })
+        .update({ role: newRoleId })
         .eq("id", userId);
         
       if (error) throw error;
       
       // Update local state
       setUsers(users.map(user => 
-        user.id === userId ? { ...user, is_admin: !currentStatus } : user
+        user.id === userId ? 
+          { ...user, role: newRoleId, roleName: newRoleId === adminRole.id ? 'admin' : 'user' } : 
+          user
       ));
       
       toast({
         title: "Success",
-        description: `User is now ${!currentStatus ? 'an admin' : 'a regular user'}`,
+        description: `User is now ${newRoleId === adminRole.id ? 'an admin' : 'a regular user'}`,
       });
     } catch (error) {
-      console.error("Error updating user admin status:", error);
+      console.error("Error updating user role:", error);
       toast({
         title: "Error",
         description: "Failed to update user status",
@@ -98,6 +165,7 @@ const AdminUsers = () => {
               <tr className="border-b">
                 <th className="text-left py-3 px-4">User ID</th>
                 <th className="text-left py-3 px-4">Name</th>
+                <th className="text-left py-3 px-4">Email</th>
                 <th className="text-left py-3 px-4">Created On</th>
                 <th className="text-center py-3 px-4">Admin Status</th>
               </tr>
@@ -107,15 +175,16 @@ const AdminUsers = () => {
                 <tr key={user.id} className="border-b hover:bg-gray-50">
                   <td className="py-3 px-4">{user.id.substring(0, 8)}...</td>
                   <td className="py-3 px-4">{user.full_name || 'No name'}</td>
-                  <td className="py-3 px-4">{new Date(user.created_at).toLocaleDateString()}</td>
+                  <td className="py-3 px-4">{user.email}</td>
+                  <td className="py-3 px-4">{new Date(user.created_at || '').toLocaleDateString()}</td>
                   <td className="py-3 px-4 text-center">
                     <div className="flex items-center justify-center">
                       <Switch
-                        checked={user.is_admin}
-                        onCheckedChange={() => toggleAdminStatus(user.id, user.is_admin)}
+                        checked={user.roleName === 'admin'}
+                        onCheckedChange={() => toggleAdminStatus(user.id, user.roleName || '')}
                       />
                       <span className="ml-2 text-sm">
-                        {user.is_admin ? 'Admin' : 'User'}
+                        {user.roleName === 'admin' ? 'Admin' : 'User'}
                       </span>
                     </div>
                   </td>

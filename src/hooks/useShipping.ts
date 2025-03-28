@@ -29,12 +29,18 @@ export const useShipping = (countryCode: string, orderTotal: number) => {
       try {
         setLoading(true);
         
-        // Use the calculate_shipping function to get available shipping rates
-        const { data, error } = await supabase
-          .rpc('calculate_shipping', {
-            p_country_code: countryCode,
-            p_order_total: orderTotal
-          });
+        if (!countryCode) {
+          setShippingRates([]);
+          return;
+        }
+        
+        // Call the calculate-shipping edge function
+        const { data, error } = await supabase.functions.invoke('calculate-shipping', {
+          body: {
+            country_code: countryCode,
+            order_total: orderTotal
+          }
+        });
         
         if (error) {
           throw error;

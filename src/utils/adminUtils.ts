@@ -3,18 +3,31 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const checkAdminStatus = async (userId: string): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
+    // First get the user's role
+    const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('is_admin')
+      .select('role')
       .eq('id', userId)
       .single();
       
-    if (error) {
-      console.error('Error checking admin status:', error);
+    if (userError) {
+      console.error('Error checking user role:', userError);
       return false;
     }
     
-    return !!data?.is_admin;
+    // Then check if the role is 'admin'
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('name')
+      .eq('id', userData.role)
+      .single();
+      
+    if (roleError) {
+      console.error('Error checking role name:', roleError);
+      return false;
+    }
+    
+    return roleData.name === 'admin';
   } catch (error) {
     console.error('Exception checking admin status:', error);
     return false;
@@ -23,9 +36,22 @@ export const checkAdminStatus = async (userId: string): Promise<boolean> => {
 
 export const grantAdminPrivileges = async (userId: string): Promise<boolean> => {
   try {
+    // Get the admin role ID
+    const { data: adminRole, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'admin')
+      .single();
+      
+    if (roleError) {
+      console.error('Error finding admin role:', roleError);
+      return false;
+    }
+    
+    // Update the user's role to admin
     const { error } = await supabase
       .from('users')
-      .update({ is_admin: true })
+      .update({ role: adminRole.id })
       .eq('id', userId);
       
     if (error) {
@@ -42,9 +68,22 @@ export const grantAdminPrivileges = async (userId: string): Promise<boolean> => 
 
 export const revokeAdminPrivileges = async (userId: string): Promise<boolean> => {
   try {
+    // Get the user role ID
+    const { data: userRole, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'user')
+      .single();
+      
+    if (roleError) {
+      console.error('Error finding user role:', roleError);
+      return false;
+    }
+    
+    // Update the user's role to regular user
     const { error } = await supabase
       .from('users')
-      .update({ is_admin: false })
+      .update({ role: userRole.id })
       .eq('id', userId);
       
     if (error) {
@@ -61,33 +100,30 @@ export const revokeAdminPrivileges = async (userId: string): Promise<boolean> =>
 
 export const listAdminUsers = async (): Promise<Array<{id: string, full_name: string, email: string}>> => {
   try {
-    // First get admin users from our users table
+    // First get the admin role ID
+    const { data: adminRole, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'admin')
+      .single();
+      
+    if (roleError) {
+      console.error('Error finding admin role:', roleError);
+      return [];
+    }
+    
+    // Get all users with the admin role
     const { data: adminUsers, error } = await supabase
       .from('users')
-      .select('id, full_name')
-      .eq('is_admin', true);
+      .select('id, full_name, email')
+      .eq('role', adminRole.id);
       
     if (error) {
       console.error('Error fetching admin users:', error);
       return [];
     }
     
-    // For each admin user, get their email from auth.users
-    // Note: This would typically be done with a join in a database, but Supabase doesn't allow
-    // direct access to auth.users through the client, so we do it in multiple steps
-    const adminsWithEmail = await Promise.all(
-      adminUsers.map(async (user) => {
-        // Note: This is a workaround - in production you'd typically use an edge function with service role
-        const { data } = await supabase.auth.admin.getUserById(user.id);
-        return {
-          id: user.id,
-          full_name: user.full_name || 'Unknown',
-          email: data?.user?.email || 'No email'
-        };
-      })
-    );
-    
-    return adminsWithEmail;
+    return adminUsers || [];
   } catch (error) {
     console.error('Exception listing admin users:', error);
     return [];

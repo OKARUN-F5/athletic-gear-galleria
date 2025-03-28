@@ -15,11 +15,24 @@ export const useDefaultAdmin = () => {
       
       console.log('Checking if default admin exists...');
       
+      // Get the admin role ID
+      const { data: adminRole, error: roleError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'admin')
+        .single();
+        
+      if (roleError) {
+        console.error('Error getting admin role:', roleError);
+        setIsCreating(false);
+        return;
+      }
+      
       // Check if any admin users exist in the database
       const { data: adminUsers, error: adminCheckError } = await supabase
         .from('users')
         .select('id')
-        .eq('is_admin', true)
+        .eq('role', adminRole.id)
         .limit(1);
         
       if (adminCheckError) {
@@ -48,7 +61,7 @@ export const useDefaultAdmin = () => {
         // Ensure the default admin has the admin role in users table
         const { data: profile, error: profileError } = await supabase
           .from('users')
-          .select('is_admin')
+          .select('role')
           .eq('id', data.user.id)
           .single();
           
@@ -60,8 +73,9 @@ export const useDefaultAdmin = () => {
             .from('users')
             .insert({
               id: data.user.id,
+              email: data.user.email || 'admin@example.com',
               full_name: 'Admin User',
-              is_admin: true
+              role: adminRole.id
             });
             
           if (insertError) {
@@ -73,11 +87,11 @@ export const useDefaultAdmin = () => {
               description: "The default admin user now has admin privileges",
             });
           }
-        } else if (!profile.is_admin) {
+        } else if (profile.role !== adminRole.id) {
           // Update existing profile to have admin role
           const { error: updateError } = await supabase
             .from('users')
-            .update({ is_admin: true })
+            .update({ role: adminRole.id })
             .eq('id', data.user.id);
             
           if (updateError) {
@@ -109,8 +123,7 @@ export const useDefaultAdmin = () => {
         password,
         options: {
           data: {
-            full_name: 'Admin User',
-            is_admin: true
+            full_name: 'Admin User'
           }
         }
       });
@@ -127,8 +140,9 @@ export const useDefaultAdmin = () => {
       if (authData.user) {
         const { error: profileError } = await supabase.from('users').insert({
           id: authData.user.id,
+          email: authData.user.email || 'admin@example.com',
           full_name: 'Admin User',
-          is_admin: true,
+          role: adminRole.id
         });
         
         if (profileError) {
