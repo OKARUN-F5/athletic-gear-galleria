@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
+import type { Product } from '@/types/database';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -88,41 +89,37 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .order('name');
-        
-        if (error) {
-          throw error;
-        }
-        
-        const productsWithDefaults = data.map(product => ({
-          ...product,
-          brand: "",
-          bestseller: false,
-          color: ""
-        }));
-        
-        setProducts(productsWithDefaults);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load products',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        throw error;
       }
-    };
-    
-    fetchProducts();
-  }, [toast]);
+      
+      const productsWithDefaults = (data || []).map(product => ({
+        ...product,
+        brand: product.brand || "",
+        bestseller: product.bestseller || false,
+        color: product.color || null
+      }));
+      
+      setProducts(productsWithDefaults);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load products',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -138,6 +135,11 @@ const AdminProducts = () => {
       });
     }
   };
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

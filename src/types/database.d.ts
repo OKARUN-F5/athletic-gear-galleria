@@ -1,4 +1,3 @@
-
 // Define database-related types for type safety
 interface ProductInventory {
   id: string;
@@ -14,7 +13,7 @@ interface Category {
   name: string;
   description: string | null;
   created_at: string;
-  images?: string[]; // Make this optional for compatibility
+  images: string[]; // Make this required since we use it
 }
 
 interface Product {

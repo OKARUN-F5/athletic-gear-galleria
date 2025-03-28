@@ -1,4 +1,3 @@
-// First, import the Category type we defined
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,13 +10,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/components/ui/use-toast';
-import ImageUploader from '@/components/admin/ImageUploader';
-
-// Define the extended Category type that includes images
-interface CategoryWithImages extends Category {
-  images: string[];
-}
+import { useToast } from '@/hooks/use-toast';
+import { ImageUploader } from '@/components/admin/ImageUploader';
+import { Category } from '@/types/database';
 
 // Define form validation schema
 const formSchema = z.object({
@@ -28,8 +23,7 @@ const formSchema = z.object({
 });
 
 const AdminCategoryImages = () => {
-  // Use the CategoryWithImages type for state
-  const [categories, setCategories] = useState<CategoryWithImages[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -58,13 +52,7 @@ const AdminCategoryImages = () => {
           throw error;
         }
         
-        // Convert database results to CategoryWithImages[]
-        const categoriesWithImages: CategoryWithImages[] = data.map(category => ({
-          ...category,
-          images: [] // Default empty images array
-        }));
-        
-        setCategories(categoriesWithImages);
+        setCategories(data || []);
       } catch (error) {
         console.error('Error fetching categories:', error);
         toast({
@@ -85,23 +73,18 @@ const AdminCategoryImages = () => {
     try {
       const { data, error } = await supabase
         .from('categories')
-        .insert([values])
+        .insert([{
+          name: values.name,
+          description: values.description || null,
+          images: []
+        }])
         .select();
       
       if (error) {
         throw error;
       }
       
-      // Add the new category to the state with an empty images array
-      const newCategory: CategoryWithImages = {
-        id: data[0].id,
-        name: values.name,
-        description: values.description || null,
-        created_at: new Date().toISOString(),
-        images: []
-      };
-      
-      setCategories([...categories, newCategory]);
+      setCategories([...categories, ...(data || [])]);
       
       toast({
         title: 'Success',
@@ -153,16 +136,15 @@ const AdminCategoryImages = () => {
     try {
       const { error } = await supabase
         .from('categories')
-        .update({ images: images })
+        .update({ images })
         .eq('id', categoryId);
       
       if (error) {
         throw error;
       }
       
-      // Update the category in the state with the new images
       setCategories(categories.map(category =>
-        category.id === categoryId ? { ...category, images: images } : category
+        category.id === categoryId ? { ...category, images } : category
       ));
       
       toast({
@@ -205,7 +187,7 @@ const AdminCategoryImages = () => {
       toast({
         title: 'Warning',
         description: 'Please select a category first',
-        variant: 'warning'
+        variant: 'destructive'
       });
     }
   };
@@ -352,7 +334,9 @@ const AdminCategoryImages = () => {
                   </div>
                 </div>
               </div>
-              <ImageUploader onUpload={handleImageUpload} />
+              <ImageUploader 
+                images={uploadedImages}
+                onChange={handleImageUpload} />
             </CardContent>
             <CardFooter>
               <Button onClick={handleImageSave}>Save Images</Button>
