@@ -52,7 +52,12 @@ const AdminCategoryImages = () => {
           throw error;
         }
         
-        setCategories(data || []);
+        const categoriesWithImages = (data || []).map(cat => ({
+          ...cat,
+          images: cat.images || []
+        }));
+        
+        setCategories(categoriesWithImages);
       } catch (error) {
         console.error('Error fetching categories:', error);
         toast({
@@ -71,6 +76,10 @@ const AdminCategoryImages = () => {
   // Create category
   const createCategory = async (values: z.infer<typeof formSchema>) => {
     try {
+      if (!values.name) {
+        throw new Error('Category name is required');
+      }
+
       const { data, error } = await supabase
         .from('categories')
         .insert([{
@@ -84,7 +93,12 @@ const AdminCategoryImages = () => {
         throw error;
       }
       
-      setCategories([...categories, ...(data || [])]);
+      const newCategories = (data || []).map(cat => ({
+        ...cat,
+        images: cat.images || []
+      }));
+      
+      setCategories([...categories, ...newCategories]);
       
       toast({
         title: 'Success',
@@ -114,7 +128,6 @@ const AdminCategoryImages = () => {
         throw error;
       }
       
-      // Remove the deleted category from the state
       setCategories(categories.filter(category => category.id !== categoryId));
       
       toast({
@@ -170,7 +183,6 @@ const AdminCategoryImages = () => {
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
     
-    // Find the selected category and set the uploaded images
     const category = categories.find(cat => cat.id === categoryId);
     if (category) {
       setUploadedImages(category.images || []);

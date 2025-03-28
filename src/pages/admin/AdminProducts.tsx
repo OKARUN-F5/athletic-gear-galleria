@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
-import type { Product } from '@/types/database';
+import { Product } from '@/types/database';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,8 +45,13 @@ import { SizeSelector } from "@/components/admin/SizeSelector";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { InventoryManager } from "@/components/admin/InventoryManager";
 
-interface Product {
-  id: string;
+interface InventoryItem {
+  size: string;
+  color: string;
+  quantity: number;
+}
+
+interface NewProduct {
   name: string;
   description: string;
   price: string;
@@ -55,15 +60,6 @@ interface Product {
   bestseller: boolean;
   color: string | null;
   images: string[];
-}
-
-interface InventoryItem {
-  size: string;
-  color: string;
-  quantity: number;
-}
-
-interface NewProduct extends Omit<Product, 'id'> {
   sizes: string[];
   inventory: InventoryItem[];
 }
@@ -105,8 +101,9 @@ const AdminProducts = () => {
         ...product,
         brand: product.brand || "",
         bestseller: product.bestseller || false,
-        color: product.color || null
-      }));
+        color: product.color || null,
+        images: product.images || []
+      })) as Product[];
       
       setProducts(productsWithDefaults);
     } catch (error) {
@@ -196,7 +193,7 @@ const AdminProducts = () => {
         description: "Product added successfully",
       });
       
-      const newProducts = data ? data.map(p => ({
+      const newProductsWithDefaults = data ? data.map(p => ({
         id: p.id,
         name: p.name,
         description: p.description || '',
@@ -205,10 +202,15 @@ const AdminProducts = () => {
         brand: p.brand || '',
         bestseller: p.bestseller || false,
         color: p.color || null,
-        images: p.images || []
+        images: p.images || [],
+        available_sizes: p.available_sizes || [],
+        available_colors: p.available_colors || [],
+        stock_quantity: p.stock_quantity || 0,
+        created_at: p.created_at,
+        updated_at: p.updated_at
       })) : [];
       
-      setProducts([...products, ...newProducts]);
+      setProducts([...products, ...newProductsWithDefaults]);
       setNewProduct({
         name: "",
         description: "",
@@ -315,6 +317,7 @@ const AdminProducts = () => {
         title: "Success",
         description: "Product deleted successfully",
       });
+      
       setProducts(products.filter((product) => product.id !== id));
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -355,7 +358,8 @@ const AdminProducts = () => {
             product_id: productId,
             size: inventoryData.size,
             color: inventoryData.color,
-            quantity: inventoryData.quantity
+            quantity: inventoryData.quantity,
+            last_updated: new Date().toISOString()
           });
         
         if (insertError) throw insertError;
@@ -371,10 +375,14 @@ const AdminProducts = () => {
       
       const productWithDefaults = {
         ...updatedProduct,
-        brand: "",
-        bestseller: false,
-        color: ""
-      };
+        brand: updatedProduct.brand || "",
+        bestseller: updatedProduct.bestseller || false,
+        color: updatedProduct.color || null,
+        images: updatedProduct.images || [],
+        available_sizes: updatedProduct.available_sizes || [],
+        available_colors: updatedProduct.available_colors || [],
+        stock_quantity: updatedProduct.stock_quantity || 0
+      } as Product;
       
       setProducts(prevProducts => 
         prevProducts.map(p => p.id === productId ? productWithDefaults : p)

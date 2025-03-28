@@ -1,5 +1,6 @@
+
 // Define database-related types for type safety
-interface ProductInventory {
+export interface ProductInventory {
   id: string;
   product_id: string;
   size: string;
@@ -8,7 +9,7 @@ interface ProductInventory {
   last_updated: string;
 }
 
-interface Category {
+export interface Category {
   id: string;
   name: string;
   description: string | null;
@@ -16,7 +17,7 @@ interface Category {
   images: string[]; // Make this required since we use it
 }
 
-interface Product {
+export interface Product {
   id: string;
   name: string;
   description: string | null;
@@ -28,12 +29,12 @@ interface Product {
   stock_quantity: number | null;
   created_at: string;
   updated_at: string;
-  brand?: string; // Make these optional for compatibility with database structure
-  bestseller?: boolean;
-  color?: string;
+  brand: string; // Make these required since we use them
+  bestseller: boolean;
+  color: string | null;
 }
 
-interface Order {
+export interface Order {
   id: string;
   user_id: string | null;
   date: string | null;
@@ -47,7 +48,7 @@ interface Order {
   updated_at: string | null;
 }
 
-interface OrderItem {
+export interface OrderItem {
   id: string;
   order_id: string | null;
   product_id: string | null;
@@ -58,7 +59,7 @@ interface OrderItem {
   created_at: string | null;
 }
 
-interface ShippingOption {
+export interface ShippingOption {
   id: string;
   name: string;
   region: string;
@@ -68,7 +69,7 @@ interface ShippingOption {
   created_at: string | null;
 }
 
-interface User {
+export interface User {
   id: string;
   email: string;
   full_name: string | null;
@@ -77,7 +78,7 @@ interface User {
   updated_at: string | null;
 }
 
-interface Role {
+export interface Role {
   id: string;
   name: string;
 }
