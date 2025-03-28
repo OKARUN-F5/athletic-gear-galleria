@@ -7,7 +7,7 @@ const testimonials = [
     name: 'Alex Johnson',
     role: 'Marathon Runner',
     image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80',
-    content: 'The running shoes I purchased from SportyWear have completely transformed my training. The comfort and support they provide is unmatched. I've shaved minutes off my marathon time!',
+    content: "The running shoes I purchased from SportyWear have completely transformed my training. The comfort and support they provide is unmatched. I've shaved minutes off my marathon time!",
     rating: 5
   },
   {
@@ -15,7 +15,7 @@ const testimonials = [
     name: 'Samantha Lee',
     role: 'Yoga Instructor',
     image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80',
-    content: 'As a yoga instructor, I need activewear that moves with me. SportyWear's leggings are fantastic - breathable, flexible, and they stay in place through every pose. I recommend them to all my students.',
+    content: "As a yoga instructor, I need activewear that moves with me. SportyWear's leggings are fantastic - breathable, flexible, and they stay in place through every pose. I recommend them to all my students.",
     rating: 5
   },
   {
@@ -23,7 +23,7 @@ const testimonials = [
     name: 'Marcus Rodriguez',
     role: 'CrossFit Athlete',
     image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80',
-    content: 'The quality of SportyWear's training gear is exceptional. I've put their shorts and t-shirts through intense CrossFit workouts, and they've held up perfectly. Great durability and comfort.',
+    content: "The quality of SportyWear's training gear is exceptional. I've put their shorts and t-shirts through intense CrossFit workouts, and they've held up perfectly. Great durability and comfort.",
     rating: 4
   }
 ];
